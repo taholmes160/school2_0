@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container my-4">
+  <h2>Student Detail</h2>
+  <dl class="row">
+    <dt class="col-sm-3">Student ID:</dt><dd class="col-sm-9">{{ student.student_id }}</dd>
+    <dt class="col-sm-3">Username:</dt><dd class="col-sm-9">{{ student.username }}</dd>
+    <dt class="col-sm-3">Name:</dt><dd class="col-sm-9">{{ student.first_name }} {{ student.last_name }}</dd>
+    <dt class="col-sm-3">Grade:</dt><dd class="col-sm-9">{{ student.grade }}</dd>
+    <dt class="col-sm-3">Age:</dt><dd class="col-sm-9">{{ student.age }}</dd>
+    <dt class="col-sm-3">Birthday:</dt><dd class="col-sm-9">{{ student.birthday }}</dd>
+    <dt class="col-sm-3">Email:</dt><dd class="col-sm-9">{{ student.email }}</dd>
+  </dl>
+  <h3>Notes</h3>
+
+<form method="post" class="mb-4">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit" class="btn btn-primary">Add Note</button>
+</form>
+
+{% if notes %}
+  <ul class="list-group">
+    {% for note in notes %}
+      <li class="list-group-item">
+        <strong>{{ note.author.get_full_name|default:note.author.username }}:</strong>
+        <br />
+        {{ note.content|linebreaks }}
+        <br />
+        <small class="text-muted">{{ note.created_at|date:"M d, Y H:i" }}</small>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p>No notes yet.</p>
+{% endif %}
+
+  <a href="{% url 'student_update' student.pk %}" class="btn btn-primary">Edit</a>
+  <a href="{% url 'student_delete' student.pk %}" class="btn btn-danger">Delete</a>
+  <a href="{% url 'student_list' %}" class="btn btn-secondary">Back to List</a>
+</div>
+{% endblock %}

@@ -1,52 +1,45 @@
 import csv
 from datetime import datetime
 from django.core.management.base import BaseCommand
-from core.models import Student
+from core.models import Student  # Adjust to your actual app/model
 
 class Command(BaseCommand):
-    help = "Import students from a TSV file with ID, student_id, first name, last name, age, grade, birthday"
+    help = 'Import students from a TSV file'
 
     def add_arguments(self, parser):
-        parser.add_argument('file_path', type=str, help="Path to the TSV file")
+        parser.add_argument('tsv_file', type=str)
 
     def handle(self, *args, **kwargs):
-        file_path = kwargs['file_path']
-
-        with open(file_path, newline='', encoding='utf-8') as tsvfile:
-            reader = csv.reader(tsvfile, delimiter='\t')
-
+        tsv_file = kwargs['tsv_file']
+        with open(tsv_file, newline='', encoding='utf-8') as file:
+            reader = csv.reader(file, delimiter='\t')
             for row in reader:
-                if not row:
-                    continue
-
                 try:
-                    # Unpack the 7 columns
-                    id_str, student_id_str, first_name, last_name, age_str, grade_str, birthday_str = row
+                    if len(row) != 8:
+                        raise ValueError(f"Expected 8 values, got {len(row)}")
 
-                    id = int(id_str.strip().lstrip('('))  # Remove leading '(' if any
-                    student_id = student_id_str.strip()
-                    username = student_id  # Already like 'stu20240438'
-                    email = f"{username}@school.net"
-                    first_name = first_name.strip()
-                    last_name = last_name.strip()
-                    age = int(age_str.strip())
-                    grade = int(grade_str.strip())
-                    birthday = datetime.strptime(birthday_str.strip(), "%m/%d/%Y").date()
+                    legacy_id, student_id, first_name, last_name, age, grade, birthday, email = row
 
-                    Student.objects.update_or_create(
-                        id=id,  # lookup by primary key id
-                        defaults={
-                            'student_id': student_id,
-                            'username': username,
-                            'email': email,
-                            'first_name': first_name,
-                            'last_name': last_name,
-                            'age': age,
-                            'grade': grade,
-                            'birthday': birthday,
-                        }
+                    # Clean and parse values
+                    age = int(age)
+                    grade = int(grade)
+                    birthday_date = datetime.strptime(birthday, "%m/%d/%Y").date()
+
+                    # Check if student already exists
+                    if Student.objects.filter(username=student_id).exists():
+                        self.stdout.write(self.style.WARNING(f"Skipped duplicate username: {student_id}"))
+                        continue
+
+                    student = Student.objects.create(
+                        username=student_id,
+                        first_name=first_name.strip(),
+                        last_name=last_name.strip(),
+                        age=age,
+                        grade=grade,
+                        birthday=birthday_date,
+                        email=email.strip(),
                     )
+                    self.stdout.write(self.style.SUCCESS(f"Imported student {student_id}"))
 
-                    self.stdout.write(self.style.SUCCESS(f"Imported {first_name} {last_name}"))
                 except Exception as e:
                     self.stdout.write(self.style.ERROR(f"Error processing row {row}: {e}"))
